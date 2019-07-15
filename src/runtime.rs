@@ -116,6 +116,15 @@ pub mod ext {
         }
     }
 
+    impl<T: RepSliceExt + ?Sized> RepSliceExt for Box<T> {
+        type Item = T::Item;
+
+        #[inline]
+        fn as_slice(&self) -> &[Self::Item] {
+            <T as RepSliceExt>::as_slice(&*self)
+        }
+    }
+
     impl<T> RepSliceExt for [T] {
         type Item = T;
 

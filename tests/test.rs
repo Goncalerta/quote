@@ -397,6 +397,14 @@ fn test_cow() {
 }
 
 #[test]
+fn test_box_slice() {
+    let b = [0,1,2];
+    let b = Box::new(b);
+    let tokens = quote! { #(#b)* };
+    assert_eq!("0i32 1i32 2i32", tokens.to_string());
+}
+
+#[test]
 fn test_closure() {
     fn field_i(i: usize) -> Ident {
         Ident::new(&format!("__field{}", i), Span::call_site())
