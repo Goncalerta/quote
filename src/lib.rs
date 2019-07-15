@@ -490,7 +490,14 @@ macro_rules! quote_bind_into_iter {
                 $($acc)*
                 // `mut` may be unused if $next occurs multiple times in the list.
                 #[allow(unused_mut)]
-                let mut $next = $next.__quote_into_iter(&mut $has_iter);
+                let mut $next = match Repeat::mode(&$next)  {
+                    RepeatMode::Consume => {
+                        Repeat::consume($next, &mut $has_iter)
+                    },
+                    RepeatMode::Borrow => {
+                        Repeat::borrow(&$next, &mut $has_iter)
+                    },
+                };
             }
             $($rest)*
         );

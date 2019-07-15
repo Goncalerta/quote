@@ -12,10 +12,47 @@ pub mod ext {
     use std::slice;
     use ToTokens;
 
+    pub enum RepeatMode {
+        Consume,
+        Borrow,
+    }
+
+    pub trait Repeat<'a, T>: Sized {
+        const MODE: RepeatMode;
+        fn mode(&self) -> RepeatMode { Self::MODE }
+
+        fn consume(self, &mut bool) -> T { unimplemented!() }
+        fn borrow(&'a self, &mut bool) -> T { unimplemented!() }
+    }
+
+    impl<'a, T: RepIteratorExt + Sized> Repeat<'a, T> for T {
+        const MODE: RepeatMode = RepeatMode::Consume;
+        
+        fn consume(self, has_iter: &mut bool) -> T { 
+            self.into_iter(has_iter)
+        }
+    }
+
+    impl<'a, T: RepToTokensExt + Sized> Repeat<'a, &'a T> for T {
+        const MODE: RepeatMode = RepeatMode::Borrow;
+        
+        fn borrow(&'a self, has_iter: &mut bool) -> &'a T { 
+            self.into_iter(has_iter)
+        }
+    }
+
+    impl<'a, T: RepSliceExt + Sized> Repeat<'a, slice::Iter<'a, T::Item>> for T {
+        const MODE: RepeatMode = RepeatMode::Borrow;
+        
+        fn borrow(&'a self, has_iter: &mut bool) -> slice::Iter<'a, T::Item> { 
+            self.into_iter(has_iter)
+        }
+    }
+
     /// Extension trait providing the `__quote_into_iter` method on iterators.
     pub trait RepIteratorExt: Iterator + Sized {
         #[inline]
-        fn __quote_into_iter(self, has_iter: &mut bool) -> Self {
+        fn into_iter(self, has_iter: &mut bool) -> Self {
             *has_iter = true;
             self
         }
@@ -36,7 +73,7 @@ pub mod ext {
         }
 
         #[inline]
-        fn __quote_into_iter<'a>(&'a self, _has_iter: &mut bool) -> &'a Self {
+        fn into_iter<'a>(&'a self, _has_iter: &mut bool) -> &'a Self {
             self
         }
     }
@@ -55,7 +92,7 @@ pub mod ext {
         fn as_slice(&self) -> &[Self::Item];
 
         #[inline]
-        fn __quote_into_iter<'a>(&'a self, has_iter: &mut bool) -> slice::Iter<'a, Self::Item> {
+        fn into_iter<'a>(&'a self, has_iter: &mut bool) -> slice::Iter<'a, Self::Item> {
             *has_iter = true;
             self.as_slice().iter()
         }

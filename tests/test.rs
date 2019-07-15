@@ -275,6 +275,67 @@ fn test_variable_name_conflict() {
 }
 
 #[test]
+fn test_rep_trait_name_conflict() {
+    trait Repeat {}
+    impl Repeat for X {}
+
+    let a = [0,1,2];
+    let x = X;
+
+    let q = quote! {
+        #(#a #x)*
+    };
+
+    assert_eq!("0i32 X 1i32 X 2i32 X", q.to_string());
+}
+
+#[test]
+fn test_rep_trait_fn_conflict() {
+    trait Repeat {
+        fn consume(self) -> !;
+        fn borrow(self) -> !;
+    }
+    impl Repeat for X {
+        fn consume(self) -> ! { panic!("Wrong trait called.") }
+        fn borrow(self) -> ! { panic!("Wrong trait called.") }
+    }
+
+    let a = [0,1,2];
+    let x = X;
+
+    let q = quote! {
+        #(#a #x)*
+    };
+
+    assert_eq!("0i32 X 1i32 X 2i32 X", q.to_string());
+}
+
+#[test]
+fn test_rep_impl_fn_conflict() {
+    struct R;
+    impl R {
+        fn consume(self) -> ! { panic!("Wrong trait called.") }
+        fn borrow(self) -> ! { panic!("Wrong trait called.") }
+    }
+    impl quote::ToTokens for R {
+        fn to_tokens(&self, tokens: &mut TokenStream) {
+            tokens.append(Ident::new("X", Span::call_site()));
+        }
+    }
+
+    let a = [0,1,2]; // Avoid infinite loop
+    let a = Box::new(a);
+    let r = R;
+
+    let q = quote! {
+        #(#a #r)*
+    };
+
+    assert_eq!("0i32 X 1i32 X 2i32 X", q.to_string());
+}
+
+
+#[test]
 fn test_nonrep_in_repetition() {
     let rep = vec!["a", "b"];
     let nonrep = "c";
